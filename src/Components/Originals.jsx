@@ -1,27 +1,32 @@
 import { useState, useEffect } from "react";
 import GlobalApi from "../Services/GlobalApi";
 import { useNavigate } from "react-router-dom";
-import { CiHeart } from "react-icons/ci"; // Icon trái tim rỗng
-import { FaHeart } from "react-icons/fa"; // Icon trái tim đậm
-import { useToast } from "@/hooks/use-toast"; // Sử dụng toast từ shadcn/ui
+import { CiHeart } from "react-icons/ci";
+import { FaHeart } from "react-icons/fa";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "../Context/AuthContext";
+import isIdValid from "../utils/checkValidId";
 
 function Originals() {
   const [originals, setOriginals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const [watchListIds, setWatchListIds] = useState(() => {
-    return JSON.parse(localStorage.getItem("watchList")) || [];
-  });
-  const { toast } = useToast(); // Sử dụng hook useToast
+  const { toast } = useToast();
+  const { addToWatchList, watchListIds } = useAuth();
 
   useEffect(() => {
     const fetchOriginals = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await GlobalApi.getMovieByGenreId(10770); // Genre ID cho TV Movie (Originals)
-        setOriginals(response.data.results);
+        const response = await GlobalApi.getMovieByGenreId(10770);
+        const validOriginals = await Promise.all(
+          response.data.results.map(async (movie) =>
+            (await isIdValid(movie.id)) ? movie : null
+          )
+        ).then((results) => results.filter((m) => m !== null));
+        setOriginals(validOriginals);
       } catch (err) {
         setError("Không thể tải danh sách originals. Vui lòng thử lại sau!");
         console.error(err);
@@ -33,13 +38,17 @@ function Originals() {
   }, []);
 
   const handleMovieClick = (movie) => {
-    navigate(`/movie/${movie.id}/${movie.title || movie.name}`);
+    navigate(
+      `/movie/${movie.id}/${encodeURIComponent(movie.title || movie.name)}`
+    );
   };
 
-  const handleAddToWatchList = (movieId) => {
-    let updatedWatchList = [...watchListIds];
-    if (!updatedWatchList.includes(movieId)) {
-      updatedWatchList.push(movieId);
+  const handleAddToWatchList = async (movieId) => {
+    const isInWatchList = watchListIds.some(
+      (item) => item.id === movieId && item.type === "movie"
+    ); // Sử dụng "movie" cho originals
+    if (!isInWatchList) {
+      await addToWatchList(movieId, "movie"); // Truyền type "movie"
       toast({
         title: "Thành công",
         description: "Đã thêm phim vào watch list!",
@@ -56,8 +65,6 @@ function Originals() {
         className: "text-sm font-medium bg-blue-500 text-white",
       });
     }
-    setWatchListIds(updatedWatchList);
-    localStorage.setItem("watchList", JSON.stringify(updatedWatchList));
   };
 
   if (loading)
@@ -65,8 +72,8 @@ function Originals() {
   if (error) return <div className="text-red-500 text-center p-6">{error}</div>;
 
   return (
-    <div className="bg-gray-900 min-h-screen text-white p-6">
-      <h1 className="text-4xl font-bold mb-6 text-gray-100 border-b-4 border-yellow-500 pb-3 relative">
+    <div className="bg-[#1a1a1a] min-h-screen text-white p-6 mt-24">
+      <h1 className="text-3xl font-bold mb-8 text-gray-100 border-b-2 border-gray-700 pb-2">
         Originals
       </h1>
       {originals.length === 0 && !loading && !error ? (
@@ -74,12 +81,14 @@ function Originals() {
           Không có phim originals để hiển thị.
         </p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {originals.map((movie) => {
             const releaseYear = movie.release_date
               ? new Date(movie.release_date).getFullYear()
               : "N/A";
-            const isInWatchList = watchListIds.includes(movie.id);
+            const isInWatchList = watchListIds.some(
+              (item) => item.id === movie.id && item.type === "movie"
+            );
 
             return (
               <div
@@ -101,7 +110,9 @@ function Originals() {
                   </p>
                   <div className="flex justify-between text-sm text-gray-400 mt-1">
                     <span>Year: {releaseYear}</span>
-                    <span>Rating: {movie.vote_average || "N/A"}</span>
+                    <span className="text-yellow-400">
+                      Rating: {movie.vote_average || "N/A"}
+                    </span>
                   </div>
                 </div>
                 <button
@@ -109,7 +120,7 @@ function Originals() {
                     e.stopPropagation();
                     handleAddToWatchList(movie.id);
                   }}
-                  className={`absolute border-none top-2 right-2 h-8 w-8 p-1 bg-transparent focus:outline-none transition-all duration-300 ${
+                  className={`absolute top-2 right-2 h-8 w-8 p-1 bg-transparent focus:outline-none transition-all duration-300 ${
                     isInWatchList
                       ? "text-red-600 hover:scale-110"
                       : "text-white hover:scale-110"
@@ -120,15 +131,6 @@ function Originals() {
                   ) : (
                     <CiHeart className="w-7 h-7" />
                   )}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMovieClick(movie); // Placeholder, có thể thay bằng route riêng
-                  }}
-                  className="absolute bottom-2 left-4 bg-blue-600 text-white text-sm font-medium px-3 py-1.5 rounded-md hover:bg-blue-700 transition duration-300"
-                >
-                  Xem ngay
                 </button>
               </div>
             );

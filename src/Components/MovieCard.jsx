@@ -1,33 +1,27 @@
 /* eslint-disable react/prop-types */
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { CiHeart } from "react-icons/ci"; // Icon trái tim rỗng
-import { FaHeart } from "react-icons/fa"; // Icon trái tim đậm
+import { CiHeart } from "react-icons/ci";
+import { FaHeart } from "react-icons/fa";
+import { useAuth } from "../Context/AuthContext";
 
 const IMAGE_BASE_URL = "http://image.tmdb.org/t/p/original";
 
 function MovieCard({ movie, onClick }) {
-  const [watchListIds, setWatchListIds] = useState(() => {
-    // Lấy danh sách ID từ localStorage khi component mount
-    return JSON.parse(localStorage.getItem("watchList")) || [];
-  });
-  const { toast } = useToast(); // Sử dụng hook useToast
+  const { addToWatchList, watchListIds } = useAuth();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    // Cập nhật localStorage khi watchListIds thay đổi
-    localStorage.setItem("watchList", JSON.stringify(watchListIds));
-  }, [watchListIds]);
-
-  const handleAddToWatchList = () => {
+  const handleAddToWatchList = async () => {
     const movieId = movie.id;
-    let updatedWatchList = [...watchListIds];
-    if (!updatedWatchList.includes(movieId)) {
-      updatedWatchList.push(movieId);
+    const isInWatchList = watchListIds.some(
+      (item) => item.id === movieId && item.type === "movie"
+    );
+    if (!isInWatchList) {
+      await addToWatchList(movieId, "movie"); // Truyền type "movie"
       toast({
         title: "Thành công",
         description: "Đã thêm phim vào Watch List!",
-        duration: 3000, // Tự động đóng sau 3 giây
-        position: "top-right", // Đặt vị trí top-right
+        duration: 3000,
+        position: "top-right",
         className: "text-sm font-medium bg-green-500 text-white",
       });
     } else {
@@ -35,53 +29,50 @@ function MovieCard({ movie, onClick }) {
         title: "Thông báo",
         description: "Phim đã có trong Watch List!",
         duration: 2000,
-        position: "top-right", // Đặt vị trí top-right
+        position: "top-right",
         className: "text-sm font-medium bg-blue-500 text-white",
       });
     }
-    setWatchListIds(updatedWatchList);
   };
 
   return (
-    <div
-      className="flex-none w-48 cursor-pointer relative transition-all duration-300 hover:shadow-2xl"
+    <section
+      className="hover:scale-110 transition-all duration-150 ease-in relative w-48 cursor-pointer bg-[#1a1a1a] z-0"
       onClick={() => onClick(movie)}
-      style={{
-        background: "linear-gradient(145deg, #2a2a2a, #3a3a3a)",
-        borderRadius: "0.5rem",
-        padding: "0.25rem",
-      }}
     >
       <img
         src={`${IMAGE_BASE_URL}${movie.poster_path}`}
         alt={movie.title || movie.name}
-        className="w-full h-auto rounded-lg shadow-lg hover:scale-105 transition-transform"
+        className="w-48 rounded-lg border-2 border-transparent hover:border-gray-400 cursor-pointer"
       />
-      <div className="mt-2 flex justify-between items-center p-2 bg-opacity-90 bg-gray-800 rounded-b-lg">
-        <h3 className="text-white text-center flex-1 truncate font-medium text-shadow">
+      <div className="mt-2 flex justify-between items-center bg-[#1a1a1a]">
+        <h3 className="text-white text-center flex-1 truncate w-48 font-medium">
           {movie.title || movie.name}
         </h3>
         <button
           onClick={(e) => {
-            e.stopPropagation(); // Ngăn sự kiện onClick của div cha
+            e.stopPropagation();
             handleAddToWatchList();
           }}
-          className={`h-8 w-8 p-1 bg-transparent focus:outline-none transition-all duration-300 ${
-            watchListIds.includes(movie.id)
+          className={`h-8 w-8 p-1 border-none bg-transparent focus:outline-none transition-all duration-150 ${
+            watchListIds.some(
+              (item) => item.id === movie.id && item.type === "movie"
+            )
               ? "text-red-600 hover:scale-110"
               : "text-white hover:scale-110"
           }`}
           aria-label="Add to Watch List"
-          style={{ textShadow: "0 0 2px rgba(0, 0, 0, 0.7)" }}
         >
-          {watchListIds.includes(movie.id) ? (
+          {watchListIds.some(
+            (item) => item.id === movie.id && item.type === "movie"
+          ) ? (
             <FaHeart className="w-5 h-5 text-red-600" />
           ) : (
             <CiHeart className="w-7 h-7 text-white" />
           )}
         </button>
       </div>
-    </div>
+    </section>
   );
 }
 

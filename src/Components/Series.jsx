@@ -1,34 +1,34 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
 import GlobalApi from "../Services/GlobalApi";
 import { useNavigate } from "react-router-dom";
-import { CiHeart } from "react-icons/ci"; // Icon trái tim rỗng
-import { FaHeart } from "react-icons/fa"; // Icon trái tim đậm
-import { useToast } from "@/hooks/use-toast"; // Sử dụng toast từ shadcn/ui
+import { CiHeart } from "react-icons/ci";
+import { FaHeart } from "react-icons/fa";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "../Context/AuthContext";
 
 function Series() {
   const [series, setSeries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const [watchListIds, setWatchListIds] = useState(() => {
-    return JSON.parse(localStorage.getItem("watchList")) || [];
-  });
-  const { toast } = useToast(); // Sử dụng hook useToast
+  const { toast } = useToast();
+  const { addToWatchList, watchListIds, removeFromWatchList } = useAuth();
 
   useEffect(() => {
     const fetchSeries = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await GlobalApi.getTVSeries(); // Sử dụng endpoint series
-        if (response.data.results) {
-          setSeries(response.data.results);
-        } else {
-          throw new Error("Dữ liệu không hợp lệ từ API");
-        }
+        const response = await GlobalApi.getTVSeries();
+        setSeries(response.data.results);
+        console.log(
+          "Fetched series IDs:",
+          response.data.results.map((s) => s.id)
+        );
       } catch (err) {
         setError("Không thể tải danh sách series. Vui lòng thử lại sau!");
-        console.error("Lỗi API:", err.message); // Log lỗi để debug
+        console.error("Lỗi API:", err.message);
       } finally {
         setLoading(false);
       }
@@ -37,31 +37,47 @@ function Series() {
   }, []);
 
   const handleSeriesClick = (seriesItem) => {
-    navigate(`/series/${seriesItem.id}/${seriesItem.name}`);
+    console.log("Navigating to series ID:", seriesItem.id, seriesItem.name);
+    navigate(`/series/${seriesItem.id}/${encodeURIComponent(seriesItem.name)}`);
   };
 
-  const handleAddToWatchList = (seriesId) => {
-    let updatedWatchList = [...watchListIds];
-    if (!updatedWatchList.includes(seriesId)) {
-      updatedWatchList.push(seriesId);
+  const handleAddToWatchList = async (seriesId) => {
+    try {
+      console.log("Before add - Current watchListIds:", watchListIds);
+      console.log("Attempting to add series ID to watchlist:", seriesId);
+      if (
+        !watchListIds.some(
+          (item) => item.id === seriesId && item.type === "series"
+        )
+      ) {
+        await addToWatchList(seriesId, "series");
+        console.log("After add - Updated watchListIds:", watchListIds);
+        toast({
+          title: "Thành công",
+          description: "Đã thêm series vào watch list!",
+          duration: 2000,
+          position: "top-right",
+          className: "text-sm font-medium bg-green-500 text-white",
+        });
+      } else {
+        toast({
+          title: "Thông báo",
+          description: "Series đã có trong watch list!",
+          duration: 2000,
+          position: "top-right",
+          className: "text-sm font-medium bg-blue-500 text-white",
+        });
+      }
+    } catch (error) {
+      console.error("Lỗi khi thêm vào watchlist:", error);
       toast({
-        title: "Thành công",
-        description: "Đã thêm series vào watch list!",
+        title: "Lỗi",
+        description: "Không thể thêm series vào watch list!",
         duration: 2000,
         position: "top-right",
-        className: "text-sm font-medium bg-green-500 text-white",
-      });
-    } else {
-      toast({
-        title: "Thông báo",
-        description: "Series đã có trong watch list!",
-        duration: 2000,
-        position: "top-right",
-        className: "text-sm font-medium bg-blue-500 text-white",
+        className: "text-sm font-medium bg-red-500 text-white",
       });
     }
-    setWatchListIds(updatedWatchList);
-    localStorage.setItem("watchList", JSON.stringify(updatedWatchList));
   };
 
   if (loading)
@@ -69,7 +85,7 @@ function Series() {
   if (error) return <div className="text-red-500 text-center p-6">{error}</div>;
 
   return (
-    <div className="bg-gray-900 min-h-screen text-white p-6">
+    <div className="bg-[#1a1a1a] min-h-screen text-white p-6 mt-24">
       <h1 className="text-3xl font-bold mb-6 text-gray-100 border-b-2 border-gray-700 pb-2">
         Series
       </h1>
@@ -78,12 +94,20 @@ function Series() {
           Không có series nào để hiển thị.
         </p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {series.map((seriesItem) => {
             const releaseYear = seriesItem.first_air_date
               ? new Date(seriesItem.first_air_date).getFullYear()
               : "N/A";
-            const isInWatchList = watchListIds.includes(seriesItem.id);
+            const isInWatchList = watchListIds.some(
+              (item) => item.id === seriesItem.id && item.type === "series"
+            );
+            console.log(
+              "Checking series ID:",
+              seriesItem.id,
+              "in watchListIds:",
+              watchListIds
+            );
 
             return (
               <div
@@ -112,8 +136,8 @@ function Series() {
                   }}
                   className={`absolute top-2 right-2 h-8 w-8 p-1 bg-transparent focus:outline-none transition-all duration-300 ${
                     isInWatchList
-                      ? "text-red-600 hover:scale-110"
-                      : "text-white hover:scale-110"
+                      ? "text-red-600 hover:scale-110 border-none"
+                      : "text-white hover:scale-110 border-none"
                   }`}
                 >
                   {isInWatchList ? (

@@ -58,7 +58,7 @@ function Search() {
   };
 
   return (
-    <div className="bg-gray-900 text-white p-6">
+    <div className="bg-[#1a1a1a] text-white p-6 mt-24">
       <h1 className="text-3xl font-bold mb-8 text-gray-100 border-b-2 border-gray-700 pb-2">
         Search
       </h1>

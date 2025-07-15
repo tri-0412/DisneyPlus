@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
 import GlobalApi from "../Services/GlobalApi";
 import { useNavigate } from "react-router-dom";
-import { CiHeart } from "react-icons/ci"; // Icon trái tim rỗng
-import { FaHeart } from "react-icons/fa"; // Icon trái tim đậm
-import { FaStar } from "react-icons/fa"; // Icon sao cho đánh giá
-import { useToast } from "@/hooks/use-toast"; // Sử dụng toast từ shadcn/ui
+import { CiHeart } from "react-icons/ci";
+import { FaHeart } from "react-icons/fa";
+import { FaStar } from "react-icons/fa";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "../Context/AuthContext";
 
 function Movies() {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const [watchListIds, setWatchListIds] = useState(() => {
-    return JSON.parse(localStorage.getItem("watchList")) || [];
-  });
-  const { toast } = useToast(); // Sử dụng hook useToast
+  const { addToWatchList, watchListIds } = useAuth();
+
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchMovies = async () => {
@@ -34,13 +34,17 @@ function Movies() {
   }, []);
 
   const handleMovieClick = (movie) => {
-    navigate(`/movie/${movie.id}/${movie.title || movie.name}`);
+    navigate(
+      `/movie/${movie.id}/${encodeURIComponent(movie.title || movie.name)}`
+    );
   };
 
-  const handleAddToWatchList = (movieId) => {
-    let updatedWatchList = [...watchListIds];
-    if (!updatedWatchList.includes(movieId)) {
-      updatedWatchList.push(movieId);
+  const handleAddToWatchList = async (movieId) => {
+    const isInWatchList = watchListIds.some(
+      (item) => item.id === movieId && item.type === "movie"
+    );
+    if (!isInWatchList) {
+      await addToWatchList(movieId, "movie"); // Truyền type "movie"
       toast({
         title: "Thành công",
         description: "Đã thêm phim vào watch list!",
@@ -57,14 +61,11 @@ function Movies() {
         className: "text-sm font-medium bg-blue-500 text-white",
       });
     }
-    setWatchListIds(updatedWatchList);
-    localStorage.setItem("watchList", JSON.stringify(updatedWatchList));
   };
 
-  // Hàm tính số sao dựa trên vote_average (tối đa 5 sao)
   const getStarRating = (voteAverage) => {
     const maxStars = 5;
-    const rating = Math.round((voteAverage || 0) / 2); // Chuyển từ 10 thành 5 sao
+    const rating = Math.round((voteAverage || 0) / 2);
     return Array(maxStars)
       .fill(0)
       .map((_, index) => (
@@ -80,8 +81,8 @@ function Movies() {
   if (error) return <div className="text-red-500 text-center p-6">{error}</div>;
 
   return (
-    <div className="bg-gray-900 min-h-screen text-white p-6">
-      <h1 className="text-4xl font-bold mb-6 text-gray-100 border-b-4 border-red-600 pb-3 relative">
+    <div className="bg-[#1a1a1a] min-h-screen text-white p-6 mt-24">
+      <h1 className="text-3xl font-bold mb-8 text-gray-100 border-b-2 border-gray-700 pb-2">
         Movies
       </h1>
       {movies.length === 0 && !loading && !error ? (
@@ -89,12 +90,14 @@ function Movies() {
           Không có phim nào để hiển thị.
         </p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {movies.map((movie) => {
             const releaseYear = movie.release_date
               ? new Date(movie.release_date).getFullYear()
               : "N/A";
-            const isInWatchList = watchListIds.includes(movie.id);
+            const isInWatchList = watchListIds.some(
+              (item) => item.id === movie.id && item.type === "movie"
+            );
 
             return (
               <div
@@ -141,41 +144,7 @@ function Movies() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Placeholder: Lấy trailer từ API nếu cần
-                    const video = GlobalApi.getMovieVideos(movie.id);
-                    video
-                      .then((resp) => {
-                        const trailer = resp.data.results.find(
-                          (vid) =>
-                            vid.type === "Trailer" && vid.site === "YouTube"
-                        );
-                        if (trailer) {
-                          window.open(
-                            `https://www.youtube.com/watch?v=${trailer.key}`,
-                            "_blank"
-                          );
-                        } else {
-                          toast({
-                            title: "Thông báo",
-                            description: "Không tìm thấy trailer!",
-                            duration: 2000,
-                            position: "top-right",
-                            className:
-                              "text-sm font-medium bg-yellow-500 text-white",
-                          });
-                        }
-                      })
-                      .catch((err) => {
-                        console.error(err);
-                        toast({
-                          title: "Lỗi",
-                          description: "Không thể tải trailer!",
-                          duration: 2000,
-                          position: "top-right",
-                          className:
-                            "text-sm font-medium bg-red-500 text-white",
-                        });
-                      });
+                    handleMovieClick(movie);
                   }}
                   className="absolute bottom-4 left-4 bg-red-600 text-white text-sm font-medium px-3 py-1 rounded-md hover:bg-red-700 transition duration-300"
                 >

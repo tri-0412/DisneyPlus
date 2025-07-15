@@ -1,85 +1,161 @@
+/* eslint-disable react/prop-types */
+/* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
 import GlobalApi from "../Services/GlobalApi";
 import { useNavigate } from "react-router-dom";
-import { IoIosCloseCircle } from "react-icons/io";
-import { Button } from "@mui/material"; // Sử dụng Button từ MUI
-import { Snackbar, Alert } from "@mui/material"; // Sử dụng Snackbar và Alert từ MUI
+import { IoIosClose } from "react-icons/io";
+import { Button } from "@mui/material";
+import { Snackbar, Alert } from "@mui/material";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "../Context/AuthContext";
 
-function WatchList() {
+function WatchList({ name }) {
   const [watchList, setWatchList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const [openSnackbar, setOpenSnackbar] = useState(false); // Quản lý trạng thái toast
+  const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState({
     title: "",
     description: "",
     movieId: null,
   });
+  const { toast } = useToast();
+  const { watchListIds, removeFromWatchList } = useAuth(); // Sử dụng trực tiếp từ useAuth
 
   useEffect(() => {
-    const storedWatchList = JSON.parse(localStorage.getItem("watchList")) || [];
-    setLoading(true);
-    setError(null);
-
     const fetchWatchListDetails = async () => {
+      setLoading(true);
+      setError(null);
+      console.log("Fetching watchlist with IDs:", JSON.stringify(watchListIds));
+
       try {
-        if (storedWatchList.length > 0) {
-          const detailsPromises = storedWatchList.map((id) =>
-            GlobalApi.getMovieDetails(id)
-          );
+        if (watchListIds && watchListIds.length > 0) {
+          const detailsPromises = watchListIds.map(async (item) => {
+            const id = item.id;
+            if (!id || isNaN(id) || id <= 0) {
+              console.error("Invalid ID in watchListIds:", item);
+              return null;
+            }
+
+            try {
+              if (item.type === "movie") {
+                const movieResp = await GlobalApi.getMovieDetails(id);
+                if (movieResp && movieResp.data) {
+                  console.log(
+                    `Successfully fetched movie ID ${id}:`,
+                    movieResp.data.title
+                  );
+                  const credits = await GlobalApi.getMovieCredits(id).catch(
+                    (err) => {
+                      console.error(`Lỗi khi lấy credits cho ID ${id}:`, err);
+                      return { data: { crew: [] } };
+                    }
+                  );
+                  const director =
+                    credits.data.crew.find(
+                      (person) => person.job === "Director"
+                    )?.name || "Unknown Director";
+                  return { ...movieResp.data, director, type: "movie" };
+                }
+              } else if (item.type === "series") {
+                const seriesResp = await GlobalApi.getTVSeriesDetails(id);
+                if (seriesResp && seriesResp.data) {
+                  console.log(
+                    `Successfully fetched series ID ${id}:`,
+                    seriesResp.data.name
+                  );
+                  const credits = await GlobalApi.getTVSeriesCredits(id).catch(
+                    (err) => {
+                      console.error(
+                        `Lỗi khi lấy credits cho series ID ${id}:`,
+                        err
+                      );
+                      return { data: { crew: [] } }; // Fallback nếu lỗi
+                    }
+                  );
+                  const director =
+                    credits.data.crew.find(
+                      (person) => person.job === "Director"
+                    )?.name || "Unknown Director";
+                  return { ...seriesResp.data, director, type: "series" };
+                } else {
+                  console.error(`No data for series ID ${id}`);
+                }
+              }
+            } catch (err) {
+              console.error(`Lỗi khi lấy chi tiết cho ID ${id}:`, err);
+              return null;
+            }
+            return null;
+          });
           const details = await Promise.all(detailsPromises);
-          const movies = await Promise.all(
-            details.map(async (resp) => {
-              const movie = resp.data;
-              const credits = await GlobalApi.getMovieCredits(movie.id);
-              const director =
-                credits.data.crew.find((person) => person.job === "Director")
-                  ?.name || "Unknown Director";
-              return { ...movie, director };
-            })
-          );
-          setWatchList(movies);
+          const validDetails = details.filter((d) => d !== null);
+          if (validDetails.length === 0) {
+            setWatchList([]);
+            return;
+          }
+          setWatchList(validDetails);
         } else {
           setWatchList([]);
         }
       } catch (error) {
-        setError("Lỗi khi lấy chi tiết phim: " + error.message);
+        setError("Lỗi khi lấy chi tiết phim/series: " + error.message);
       } finally {
         setLoading(false);
       }
     };
     fetchWatchListDetails();
-  }, []);
+  }, [watchListIds]);
 
-  const handleMovieClick = (movie) => {
-    navigate(`/movie/${movie.id}/${movie.title || movie.name}`);
+  const handleMovieClick = (item) => {
+    const path = item.type === "series" ? "/series" : "/movie";
+    navigate(
+      `${path}/${item.id}/${encodeURIComponent(item.title || item.name)}`
+    );
   };
 
-  const removeFromWatchList = (movieId) => {
-    // Tìm movie tương ứng để hiển thị thông tin
-    const movieToRemove = watchList.find((movie) => movie.id === movieId);
-    const movieTitle = movieToRemove?.title || movieToRemove?.name || "Unknown";
-
+  const handleRemoveFromWatchList = (movieId) => {
+    // Đổi tên để tránh xung đột
+    const itemToRemove = watchList.find((item) => item.id === movieId);
+    const itemTitle = itemToRemove?.title || itemToRemove?.name || "Unknown";
+    const type = itemToRemove?.type || "movie";
     setSnackbarMessage({
       title: "Xác nhận xóa",
-      description: `Xóa "${movieTitle}"?`,
+      description: `Xóa "${itemTitle}" khỏi danh sách yêu thích?`,
       movieId: movieId,
     });
-    setOpenSnackbar(true); // Mở Snackbar
+    setOpenSnackbar(true);
   };
 
-  const handleConfirmRemove = () => {
-    const movieId = snackbarMessage.movieId;
-    const updatedWatchList = watchList.filter((movie) => movie.id !== movieId);
-    setWatchList(updatedWatchList);
-    const storedIds = updatedWatchList.map((movie) => movie.id);
-    localStorage.setItem("watchList", JSON.stringify(storedIds));
-    setOpenSnackbar(false); // Đóng Snackbar sau khi xác nhận
-  };
+  const handleConfirmRemove = async (movieId) => {
+    try {
+      const itemToRemove = watchList.find((item) => item.id === movieId);
+      const type = itemToRemove?.type || "movie";
+      await removeFromWatchList(movieId, type); // Sử dụng hàm từ useAuth
+      const updatedWatchList = watchList.filter((item) => item.id !== movieId);
+      setWatchList(updatedWatchList);
 
-  const handleCancelRemove = () => {
-    setOpenSnackbar(false); // Đóng Snackbar khi hủy
+      const removedItem = watchList.find((item) => item.id === movieId);
+      const itemTitle = removedItem?.title || removedItem?.name || "Unknown";
+
+      toast({
+        title: "Thành công",
+        description: `Đã xóa "${itemTitle}" khỏi watchlist!`,
+        duration: 3000,
+        className: "bg-green-800 border border-green-700 text-white",
+      });
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa khỏi watchlist!",
+        duration: 3000,
+        className: "bg-red-800 border border-red-700 text-white",
+      });
+      console.error("Lỗi khi xóa watchlist:", error);
+    } finally {
+      setOpenSnackbar(false);
+    }
   };
 
   if (loading)
@@ -87,7 +163,7 @@ function WatchList() {
   if (error) return <div className="text-red-500 text-center p-6">{error}</div>;
 
   return (
-    <div className="bg-gray-900 min-h-screen text-white p-6">
+    <div className="bg-[#1a1a1a] min-h-screen text-white p-6 mt-24 z-10">
       <h1 className="text-3xl font-bold mb-8 text-gray-100 border-b-2 border-gray-700 pb-2">
         Watch List
       </h1>
@@ -97,74 +173,80 @@ function WatchList() {
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {watchList.map((movie) => {
-            const releaseYear = movie.release_date
-              ? new Date(movie.release_date).getFullYear()
-              : "N/A";
+          {watchList.map((item) => {
+            const releaseYear =
+              item.release_date || item.first_air_date
+                ? new Date(
+                    item.release_date || item.first_air_date
+                  ).getFullYear()
+                : "N/A";
 
             return (
               <div
-                key={movie.id}
-                className="relative bg-gray-800 rounded-xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl"
+                key={item.id}
+                className="relative bg-gray-800 rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl"
               >
                 <img
-                  src={`https://image.tmdb.org/t/p/w500/${movie.poster_path}`}
-                  alt={movie.title || movie.name}
+                  src={`https://image.tmdb.org/t/p/w500/${item.poster_path}`}
+                  alt={item.title || item.name}
                   className="w-full h-72 object-cover"
                 />
                 <div className="p-4">
                   <p className="text-lg font-semibold text-gray-200 truncate">
-                    {movie.title || movie.name}
+                    {item.title || item.name}
                   </p>
                   <div className="flex justify-between text-sm text-gray-400 mt-1">
-                    <span className="text-yellow-400">{movie.director}</span>
+                    <span className="text-yellow-400">
+                      {item.director || "Unknown Director"}
+                    </span>
                     <span>{releaseYear}</span>
                   </div>
                 </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    removeFromWatchList(movie.id);
+                    handleRemoveFromWatchList(item.id);
                   }}
-                  className="absolute cursor-pointer top-2 right-2 p-0 border-none rounded-full flex items-center justify-center align-middle transition-all duration-200 focus:outline-none z-20"
+                  className="absolute top-2 right-2 p-0 outline-none border-none rounded-full flex items-center justify-center align-middle transition-all duration-200 focus:outline-none !border-0 !outline-0 focus:!ring-0 z-20"
                 >
-                  <IoIosCloseCircle className="text-red-600 w-6 h-6" />
+                  <IoIosClose className="text-red-600 w-6 h-6 bg-transparent" />
                 </button>
                 <div
                   className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-opacity duration-300 cursor-pointer z-10"
-                  onClick={() => handleMovieClick(movie)}
+                  onClick={() => handleMovieClick(item)}
                 />
               </div>
             );
           })}
         </div>
       )}
-      {/* Sử dụng Snackbar từ MUI với layout text và button cải tiến */}
       <Snackbar
         open={openSnackbar}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }} // Vị trí top-center
-        autoHideDuration={null} // Không tự động đóng
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        autoHideDuration={null}
         onClose={() => setOpenSnackbar(false)}
         sx={{
           "& .MuiPaper-root": {
-            background: "linear-gradient(135deg, #1a202c, #2d3748)", // Gradient nền
-            borderRadius: "10px", // Bo góc mềm
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)", // Đổ bóng
-            padding: "8px 16px", // Padding gọn
-            maxWidth: "320px", // Chiều rộng cố định
-            width: "100%", // Responsive
+            background: "linear-gradient(135deg, #1a202c, #2d3748)",
+            borderRadius: "10px",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
+            padding: "10px 18px",
+            marginTop: "108px",
+            maxWidth: "320px",
+            width: "100%",
+            zIndex: 50,
           },
         }}
       >
         <Alert
           severity="warning"
           action={
-            <div className="flex justify-between w-full mt-2 ">
+            <div className="flex justify-between w-full">
               <Button
                 variant="contained"
                 color="error"
                 size="small"
-                onClick={handleConfirmRemove}
+                onClick={() => handleConfirmRemove(snackbarMessage.movieId)}
                 sx={{
                   fontSize: "12px",
                   padding: "2px 8px",
@@ -178,7 +260,7 @@ function WatchList() {
               <Button
                 variant="outlined"
                 size="small"
-                onClick={handleCancelRemove}
+                onClick={() => setOpenSnackbar(false)}
                 sx={{
                   fontSize: "12px",
                   padding: "2px 8px",
@@ -199,7 +281,7 @@ function WatchList() {
             width: "100%",
             padding: "0",
             display: "flex",
-            flexDirection: "column", // Xếp text trên, action dưới
+            flexDirection: "column",
             "& .MuiAlert-message": {
               color: "#e2e8f0",
               fontSize: "14px",

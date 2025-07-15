@@ -26,7 +26,6 @@ function ProductionHouse() {
     },
     {
       id: 3,
-
       image: marvel,
       video: marvelV,
     },
@@ -41,11 +40,14 @@ function ProductionHouse() {
       video: nationalGeographicV,
     },
   ];
+
   return (
-    <div className="flex  gap-2 md:gap-5 p-2 px-5 md:px-16">
+    <div className="flex gap-2 md:gap-5 p-2 px-5 md:px-16 pt-10 z-10 relative">
       {productionHouseList.map((item) => (
-        // eslint-disable-next-line react/jsx-key
-        <div className="relative border-[2px] border-gray-600 rounded-lg hover:scale-110 transition-all duration-300 ease-in-out cursor-pointer shadow-xl shadow-gray-800">
+        <div
+          key={item.id}
+          className="relative border-[2px] border-gray-600 rounded-lg hover:scale-110 transition-all duration-300 ease-in-out cursor-pointer shadow-xl shadow-gray-800"
+        >
           <video
             src={item.video}
             autoPlay
@@ -53,7 +55,7 @@ function ProductionHouse() {
             playsInline
             className="absolute top-0 rounded-md z-0 opacity-0 hover:opacity-50"
           />
-          <img src={item.image} alt="n" className="w-full z-[1]" />
+          <img src={item.image} alt={item.id} className="w-full z-[1]" />
         </div>
       ))}
     </div>

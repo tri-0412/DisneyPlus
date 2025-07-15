@@ -1,4 +1,4 @@
-// Import the functions you need from the SDKs you need
+// firebase.js
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
@@ -6,9 +6,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { getFirestore, collection, addDoc } from "firebase/firestore";
+import { getFirestore, setDoc, doc, getDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
-// import { getAnalytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -30,17 +29,29 @@ const signup = async (name, email, password) => {
   try {
     const res = await createUserWithEmailAndPassword(auth, email, password);
     const user = res.user;
-    await addDoc(collection(db, "user"), {
-      uid: user.uid,
-      name,
-      authProvider: "local",
-      email,
-    });
-    return user; // Trả về user sau khi đăng ký
+    await setDoc(
+      doc(db, "users", user.uid),
+      {
+        uid: user.uid,
+        name,
+        authProvider: "local",
+        email,
+      },
+      { merge: true }
+    );
+    // Khởi tạo watchlist
+    await setDoc(doc(db, "watchlists", user.uid), { ids: [] }, { merge: true });
+    return user;
   } catch (error) {
-    console.log(error);
-    toast.error(error.code.split("/")[1].split("-").join(" "));
-    throw error; // Ném lỗi để xử lý ở component
+    console.error("Signup error:", error);
+    if (error.code) {
+      toast.error(
+        error.code.split("/")[1].split("-").join(" ") || "Đã xảy ra lỗi"
+      );
+    } else {
+      toast.error("Đã xảy ra lỗi không xác định");
+    }
+    throw error;
   }
 };
 
@@ -52,11 +63,17 @@ const login = async (email, password) => {
       password
     );
     const user = userCredential.user;
-    return user; // Trả về user sau khi đăng nhập
+    // Kiểm tra và khởi tạo watchlist nếu chưa có
+    const watchlistRef = doc(db, "watchlists", user.uid);
+    const docSnap = await getDoc(watchlistRef);
+    if (!docSnap.exists()) {
+      await setDoc(watchlistRef, { ids: [] }, { merge: true });
+    }
+    return user;
   } catch (error) {
     console.log(error);
     toast.error(error.code.split("/")[1].split("-").join(" "));
-    throw error; // Ném lỗi để xử lý ở component
+    throw error;
   }
 };
 
