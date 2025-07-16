@@ -19,7 +19,7 @@ import Originals from "./Components/Originals";
 import Movies from "./Components/Movies";
 import Series from "./Components/Series";
 import Footer from "./Components/Footer";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/Toaster";
 import Login from "./Components/Login";
 import { auth } from "@/../firebase";
 import { onAuthStateChanged } from "firebase/auth";
