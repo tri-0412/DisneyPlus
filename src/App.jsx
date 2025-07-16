@@ -19,15 +19,23 @@ import Originals from "./Components/Originals";
 import Movies from "./Components/Movies";
 import Series from "./Components/Series";
 import Footer from "./Components/Footer";
-import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/hooks/use-toast"; // Import useToast để sử dụng
+import {
+  Toast,
+  ToastClose,
+  ToastDescription,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
+} from "@/components/ui/toast"; // Import các thành phần toast
 import Login from "./Components/Login";
 import { auth } from "@/../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import SeriesDetail from "./Components/SeriesDetail";
 import GenreDetailList from "./Components/GenreDetailList";
 import WatchPageFilm from "./Components/WatchPageFilm";
-import WatchPageTrailer from "./Components/WatchPageTrailer"; // Import WatchPageTrailer
-import WatchPageSeries from "./Components/WatchPageSeries"; // Import
+import WatchPageTrailer from "./Components/WatchPageTrailer";
+import WatchPageSeries from "./Components/WatchPageSeries";
 
 function AppContent() {
   const location = useLocation();
@@ -67,6 +75,29 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Component Toaster
+  function Toaster() {
+    const { toasts } = useToast();
+
+    return (
+      <ToastProvider>
+        {toasts.map((toast) => (
+          <Toast key={toast.id} {...toast}>
+            <div className="grid gap-1">
+              {toast.title && <ToastTitle>{toast.title}</ToastTitle>}
+              {toast.description && (
+                <ToastDescription>{toast.description}</ToastDescription>
+              )}
+            </div>
+            {toast.action}
+            <ToastClose />
+          </Toast>
+        ))}
+        <ToastViewport />
+      </ToastProvider>
+    );
+  }
+
   return (
     <div>
       {showHomeComponents && <Header />}
@@ -87,14 +118,12 @@ function AppContent() {
         <Route path="/movie/:id/:title" element={<MovieDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/genre/:genreId" element={<GenreDetailList />} />
-        <Route path="/watch/:id" element={<WatchPageFilm />} /> {/* Phim */}
+        <Route path="/watch/:id" element={<WatchPageFilm />} />
         <Route
           path="/watch/:id/:season/:episode"
           element={<WatchPageSeries />}
-        />{" "}
-        {/* TV series */}
-        <Route path="/watch/trailer/:id" element={<WatchPageTrailer />} />{" "}
-        {/* Trailer */}
+        />
+        <Route path="/watch/trailer/:id" element={<WatchPageTrailer />} />
       </Routes>
       {showHomeComponents && <Footer />}
       {showHomeComponents && isVisible && (
@@ -106,7 +135,7 @@ function AppContent() {
           <LuArrowUpFromLine className="absolute w-6 h-6" />
         </button>
       )}
-      <Toaster />
+      <Toaster /> {/* Sử dụng component Toaster trực tiếp */}
     </div>
   );
 }
