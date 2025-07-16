@@ -10,6 +10,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    outDir: "dist", // Đảm bảo thư mục output là 'dist'
+  },
   server: {
     proxy: {
       "/vidsrc": {
