@@ -6,6 +6,7 @@ import { FaArrowLeft } from "react-icons/fa";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "../Context/AuthContext";
 import isIdValid from "../utils/checkValidId";
+import LoadingSkeleton from "./LoadingSkeleton";
 
 const IMAGE_BASE_URL = "http://image.tmdb.org/t/p/original";
 
@@ -112,9 +113,8 @@ function MovieDetail() {
   };
 
   if (isLoading)
-    return (
-      <div className="text-white text-center p-10 text-2xl">Đang tải...</div>
-    );
+    return <LoadingSkeleton count={1} width="100%" height="500px" />;
+
   if (error)
     return <div className="text-white text-center p-10 text-2xl">{error}</div>;
 

@@ -3,9 +3,10 @@ import GlobalApi from "../Services/GlobalApi";
 import { useNavigate } from "react-router-dom";
 import { CiHeart } from "react-icons/ci";
 import { FaHeart } from "react-icons/fa";
-import { FaStar } from "react-icons/fa";
+// import { FaStar } from "react-icons/fa";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "../Context/AuthContext";
+import LoadingSkeleton from "./LoadingSkeleton";
 
 function Movies() {
   const [movies, setMovies] = useState([]);
@@ -13,7 +14,6 @@ function Movies() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { addToWatchList, watchListIds } = useAuth();
-
   const { toast } = useToast();
 
   useEffect(() => {
@@ -63,26 +63,30 @@ function Movies() {
     }
   };
 
-  const getStarRating = (voteAverage) => {
-    const maxStars = 5;
-    const rating = Math.round((voteAverage || 0) / 2);
-    return Array(maxStars)
-      .fill(0)
-      .map((_, index) => (
-        <FaStar
-          key={index}
-          className={index < rating ? "text-yellow-400" : "text-gray-500"}
-        />
-      ));
-  };
+  // const getStarRating = (voteAverage) => {
+  //   const maxStars = 5;
+  //   const rating = Math.round((voteAverage || 0) / 2);
+  //   return Array(maxStars)
+  //     .fill(0)
+  //     .map((_, index) => (
+  //       <FaStar
+  //         key={index}
+  //         className={index < rating ? "text-yellow-400" : "text-gray-500"}
+  //       />
+  //     ));
+  // };
 
-  if (loading)
-    return <div className="text-white text-center p-6">Đang tải...</div>;
   if (error) return <div className="text-red-500 text-center p-6">{error}</div>;
+  if (loading) return <LoadingSkeleton count={12} />;
 
   return (
-    <div className="bg-[#1a1a1a] min-h-screen text-white p-6 mt-24">
-      <h1 className="text-3xl font-bold mb-8 text-gray-100 border-b-2 border-gray-700 pb-2">
+    <div className="bg-[#1a1a1a] w-[1200px] min-h-screen text-white p-6 mt-24 mx-auto">
+      <h1
+        className="text-3xl font-bold mt-6 mb-10 
+               text-[#3cb4ff] tracking-wide uppercase 
+               drop-shadow-[0_0_10px_#5baee5] 
+               text-center"
+      >
         Movies
       </h1>
       {movies.length === 0 && !loading && !error ? (
@@ -92,9 +96,9 @@ function Movies() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {movies.map((movie) => {
-            const releaseYear = movie.release_date
-              ? new Date(movie.release_date).getFullYear()
-              : "N/A";
+            // const releaseYear = movie.release_date
+            //   ? new Date(movie.release_date).getFullYear()
+            //   : "N/A";
             const isInWatchList = watchListIds.some(
               (item) => item.id === movie.id && item.type === "movie"
             );
@@ -102,7 +106,7 @@ function Movies() {
             return (
               <div
                 key={movie.id}
-                className="relative bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer"
+                className="relative rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer"
                 onClick={() => handleMovieClick(movie)}
               >
                 <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
@@ -111,18 +115,18 @@ function Movies() {
                 <img
                   src={`https://image.tmdb.org/t/p/w500/${movie.poster_path}`}
                   alt={movie.title || movie.name}
-                  className="w-full h-64 object-cover rounded-t-lg opacity-95 hover:opacity-100 transition-opacity"
+                  className="w-full h-65 object-cover rounded-lg opacity-95 hover:opacity-100 transition-opacity"
                 />
-                <div className="p-4">
-                  <p className="text-lg -mt-2 mb-5 font-semibold text-gray-200 truncate">
+                <div className=" flex py-2">
+                  <p className="text-md -mt-2 p-2 font-semibold text-gray-200 mb-1 truncate">
                     {movie.title || movie.name}
                   </p>
-                  <div className="flex justify-between items-center text-sm text-gray-400 mt-1">
+                  {/* <div className="flex justify-between items-center text-sm text-gray-400">
                     <span>Year: {releaseYear}</span>
                     <div className="flex items-center">
                       {getStarRating(movie.vote_average)}
                     </div>
-                  </div>
+                  </div> */}
                 </div>
                 <button
                   onClick={(e) => {
@@ -141,7 +145,7 @@ function Movies() {
                     <CiHeart className="w-7 h-7" />
                   )}
                 </button>
-                <button
+                {/* <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleMovieClick(movie);
@@ -149,7 +153,7 @@ function Movies() {
                   className="absolute bottom-4 left-4 bg-red-600 text-white text-sm font-medium px-3 py-1 rounded-md hover:bg-red-700 transition duration-300"
                 >
                   Xem Ngay
-                </button>
+                </button> */}
               </div>
             );
           })}

@@ -22,13 +22,10 @@ function WatchPageSeries() {
   useEffect(() => {
     setIsLoading(true);
     setError(null);
-    setSelectedSeason(parseInt(season) || 1); // Đồng bộ selectedSeason
-
-    console.log("Params from useParams:", { id, season, episode });
+    setSelectedSeason(parseInt(season) || 1);
 
     const { embedUrl, source } = location.state || {};
     if (embedUrl) {
-      console.log("Using embedUrl from state:", embedUrl);
       setVideo({ embedUrl, source });
     } else if (season && episode) {
       const parsedSeason = parseInt(season);
@@ -43,7 +40,6 @@ function WatchPageSeries() {
         .catch((err) => {
           setError(`Không thể tải video: ${err.message}`);
           setVideo(null);
-          console.error("Video fetch error:", err);
         });
     }
 
@@ -51,16 +47,13 @@ function WatchPageSeries() {
       .then((resp) => setMediaDetails(resp.data))
       .catch((err) => {
         setError(`Không thể tải thông tin series: ${err.message}`);
-        console.error("Details fetch error:", err);
       });
 
     const fetchSimilar = GlobalApi.getSimilarTV(id)
       .then((resp) =>
         setSimilarSeries(resp.data.results ? resp.data.results.slice(0, 6) : [])
       )
-      .catch((err) =>
-        console.log("Không thể tải series tương tự:", err.message)
-      );
+      .catch(() => {});
 
     Promise.all([fetchDetails, fetchSimilar]).finally(() =>
       setIsLoading(false)
@@ -72,12 +65,10 @@ function WatchPageSeries() {
   };
 
   const toggleSeason = (seasonNumber) => {
-    setExpandedSeasons((prev) => {
-      const newExpanded = { [seasonNumber]: !prev[seasonNumber] };
-      return seasonNumber === 1 && !prev[1]
-        ? { ...newExpanded, 1: true }
-        : newExpanded;
-    });
+    setExpandedSeasons((prev) => ({
+      ...prev,
+      [seasonNumber]: !prev[seasonNumber],
+    }));
   };
 
   const toggleEpisodes = (seasonNumber) => {
@@ -90,10 +81,16 @@ function WatchPageSeries() {
   const formattedSeason = String(parseInt(season || 0)).padStart(2, "0");
   const formattedEpisode = String(parseInt(episode || 0)).padStart(2, "0");
 
-  if (isLoading)
+  // 👉 Loading state (skeleton)
+  if (isLoading) {
     return (
-      <div className="text-white text-center p-10 text-2xl">Đang tải...</div>
+      <div className="min-h-screen bg-black flex flex-col justify-center items-center">
+        <div className="animate-pulse w-3/4 h-[500px] bg-gray-800 rounded-xl mb-6"></div>
+        <div className="animate-pulse w-1/2 h-6 bg-gray-700 rounded"></div>
+      </div>
     );
+  }
+
   if (error)
     return (
       <div className="text-white text-center p-10 text-2xl">
@@ -101,9 +98,7 @@ function WatchPageSeries() {
         <button
           onClick={() => navigate(-1)}
           className="mt-4 p-2 bg-blue-600 rounded-md hover:bg-blue-700"
-        >
-          Quay lại
-        </button>
+        ></button>
       </div>
     );
 
@@ -118,21 +113,24 @@ function WatchPageSeries() {
           : "none",
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
       }}
     >
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-0"></div>
+
+      {/* Back button */}
       <button
         onClick={() => navigate(-1)}
-        className="absolute top-10 left-6 flex items-center text-white text-xl hover:text-gray-300 transition-colors duration-300 bg-transparent z-10"
+        className="absolute top-14 left-6 flex items-center text-white text-xl hover:text-gray-300 transition-colors duration-300 bg-transparent z-10"
       >
-        <FaArrowLeft className="mr-2 w-7 h-7" />
+        <FaArrowLeft className="mr-2 w-6 h-6" />
       </button>
+
+      {/* Main content */}
       {mediaDetails && video && video.embedUrl ? (
         <div className="relative z-10 max-w-7xl mx-auto mt-10 flex flex-col md:flex-row gap-6">
           {/* Video Player */}
           <div className="w-full md:w-3/4 mx-auto">
-            <h1 className="text-3xl md:text-3xl font-bold mb-6 text-center text-gray-100">
+            <h1 className="text-3xl font-bold mb-6 text-center text-gray-100">
               {mediaDetails.name} - Phần {formattedSeason} Tập{" "}
               {formattedEpisode}
             </h1>
@@ -146,27 +144,15 @@ function WatchPageSeries() {
               allowFullScreen
               className="rounded-xl shadow-lg mb-4"
               style={{ aspectRatio: "16/9" }}
-              onError={(e) => {
-                console.error("Iframe error:", e);
-                setError(
-                  "Không thể tải video từ nguồn hiện tại, kiểm tra console log."
-                );
-              }}
-              onLoad={() =>
-                console.log("Iframe loaded successfully:", video.embedUrl)
-              }
             ></iframe>
-            {error && (
-              <div className="text-red-500 text-center mb-4">{error}</div>
-            )}
           </div>
 
-          {/* Danh sách Phần & Tập (bên phải, có cuộn) */}
+          {/* Danh sách Season/Episode */}
           <div className="w-full md:w-1/4 h-[500px] bg-transparent rounded-xl p-4 shadow-md ml-20 mt-[42px] mx-auto">
-            <h2 className="text-xl md:text-2xl font-semibold mb-3 text-center text-gray-100 border-b border-gray-600 pb-2">
+            <h2 className="text-xl font-semibold mb-3 text-center text-gray-100 border-b border-gray-600 pb-2">
               Danh sách Phần
             </h2>
-            <div className="space-y-3 overflow-y-auto h-full ">
+            <div className="space-y-3 overflow-y-auto h-full">
               {mediaDetails.seasons.map((s) => {
                 const isExpanded = expandedSeasons[s.season_number] || false;
                 const isEpisodesExpanded =
@@ -181,11 +167,11 @@ function WatchPageSeries() {
                 return (
                   <div
                     key={s.season_number}
-                    className="bg-gray-700 rounded-lg p-2 shadow-md transition-all duration-300 hover:shadow-lg"
+                    className="bg-gray-700 rounded-lg p-2 shadow-md"
                   >
                     <button
                       onClick={() => toggleSeason(s.season_number)}
-                      className="w-full text-left text-base md:text-lg font-semibold text-gray-200 flex justify-between items-center py-1"
+                      className="w-full text-left text-base font-semibold text-gray-200 flex justify-between items-center py-1"
                     >
                       <span>
                         Phần {String(s.season_number).padStart(2, "0")}
@@ -201,7 +187,6 @@ function WatchPageSeries() {
                         {visibleEpisodes.map((ep) => {
                           const isActive =
                             season == s.season_number && episode == ep;
-                          const isWatched = false; // Thêm logic từ watchListIds nếu có
                           return (
                             <button
                               key={ep}
@@ -210,20 +195,11 @@ function WatchPageSeries() {
                                   `/watch/${id}/${s.season_number}/${ep}`
                                 )
                               }
-                              className={`w-full p-1.5 rounded-md text-sm font-medium transition-colors duration-200 outline-none ${
-                                isActive
-                                  ? "bg-gray-400 "
-                                  : isWatched
-                                  ? "bg-green-600 opacity-70"
-                                  : "bg-gray-600 "
+                              className={`w-full p-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${
+                                isActive ? "bg-gray-400" : "bg-gray-600"
                               }`}
                             >
                               Tập {String(ep).padStart(2, "0")}
-                              {isWatched && (
-                                <span className="ml-1 text-xs text-gray-300">
-                                  (Đã xem)
-                                </span>
-                              )}
                             </button>
                           );
                         })}
@@ -244,42 +220,41 @@ function WatchPageSeries() {
           </div>
         </div>
       ) : (
-        <div className="text-white text-center p-10 text-2xl mx-auto">
+        <div className="text-white text-center p-10 text-2xl">
           Không tìm thấy nội dung video.
         </div>
       )}
 
+      {/* Similar Series */}
       {similarSeries.length > 0 && (
         <div className="mt-10 relative z-20 mx-20">
-          <h2 className="text-2xl md:text-3xl font-semibold mb-4 text-gray-100 border-b border-gray-700 pb-2">
+          <h2 className="text-2xl font-semibold mb-4 text-gray-100 border-b border-gray-700 pb-2">
             Series tương tự
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mx-auto">
-            {similarSeries.map((series) => {
-              return (
-                <div
-                  key={series.id}
-                  className="relative h-[420px] rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer"
-                  onClick={() => handleSeriesClick(series.id)}
-                >
-                  <img
-                    src={`https://image.tmdb.org/t/p/w500/${series.poster_path}`}
-                    alt={series.name}
-                    className="w-full h-[340px] object-cover rounded-b-xl "
-                  />
-                  <div className="p-3 bg-opacity-90">
-                    <p className="text-lg font-semibold text-gray-200 truncate">
-                      {series.name}
-                    </p>
-                  </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {similarSeries.map((series) => (
+              <div
+                key={series.id}
+                className="relative h-[420px] rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer"
+                onClick={() => handleSeriesClick(series.id)}
+              >
+                <img
+                  src={`https://image.tmdb.org/t/p/w500/${series.poster_path}`}
+                  alt={series.name}
+                  className="w-full h-[340px] object-cover rounded-b-xl"
+                />
+                <div className="p-3 bg-opacity-90">
+                  <p className="text-lg font-semibold text-gray-200 truncate">
+                    {series.name}
+                  </p>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       )}
-      {similarSeries.length === 0 && (
-        <p className="text-gray-400 text-center mt-10 mx-auto">
+      {similarSeries.length === 0 && !isLoading && (
+        <p className="text-gray-400 text-center mt-10">
           Không có series tương tự.
         </p>
       )}

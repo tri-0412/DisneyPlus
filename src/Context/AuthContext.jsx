@@ -1,10 +1,11 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
 /* eslint-disable no-useless-catch */
 import { createContext, useContext, useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
-import { auth, db } from "../../firebase";
+import { auth, db, login, signup, logout } from "../../firebase"; // Sử dụng từ firebase.js
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
@@ -40,9 +41,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const signup = async (email, password) => {
+  const signup = async (name, email, password) => {
     try {
-      const userCredential = await signup(email, password);
+      const userCredential = await signup(name, email, password); // Sử dụng từ firebase.js
       console.log("Signup successful:", userCredential);
       return userCredential;
     } catch (error) {
@@ -53,7 +54,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const userCredential = await login(email, password);
+      const userCredential = await login(email, password); // Sử dụng từ firebase.js
       console.log("Login successful:", userCredential);
       return userCredential;
     } catch (error) {
@@ -64,7 +65,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await logout();
+      await logout(); // Sử dụng từ firebase.js
       console.log("Logout successful");
     } catch (error) {
       console.error("Lỗi khi đăng xuất:", error);

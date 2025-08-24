@@ -6,6 +6,7 @@ import { FaHeart } from "react-icons/fa";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "../Context/AuthContext";
 import isIdValid from "../utils/checkValidId";
+import LoadingSkeleton from "./LoadingSkeleton";
 
 function Originals() {
   const [originals, setOriginals] = useState([]);
@@ -67,13 +68,18 @@ function Originals() {
     }
   };
 
-  if (loading)
-    return <div className="text-white text-center p-6">Đang tải...</div>;
+  if (loading) return <LoadingSkeleton count={12} />;
+
   if (error) return <div className="text-red-500 text-center p-6">{error}</div>;
 
   return (
-    <div className="bg-[#1a1a1a] min-h-screen text-white p-6 mt-24">
-      <h1 className="text-3xl font-bold mb-8 text-gray-100 border-b-2 border-gray-700 pb-2">
+    <div className="bg-[#1a1a1a] min-h-screen w-[1200px] text-white p-6 mt-24 mx-auto">
+      <h1
+        className="text-3xl font-bold mt-6 mb-10 
+               text-[#3cb4ff] tracking-wide uppercase 
+               drop-shadow-[0_0_10px_#5baee5] 
+               text-center"
+      >
         Originals
       </h1>
       {originals.length === 0 && !loading && !error ? (
@@ -83,9 +89,9 @@ function Originals() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {originals.map((movie) => {
-            const releaseYear = movie.release_date
-              ? new Date(movie.release_date).getFullYear()
-              : "N/A";
+            // const releaseYear = movie.release_date
+            //   ? new Date(movie.release_date).getFullYear()
+            //   : "N/A";
             const isInWatchList = watchListIds.some(
               (item) => item.id === movie.id && item.type === "movie"
             );
@@ -93,7 +99,7 @@ function Originals() {
             return (
               <div
                 key={movie.id}
-                className="relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl cursor-pointer"
+                className="relative rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer"
                 onClick={() => handleMovieClick(movie)}
               >
                 <div className="absolute top-2 left-2 bg-yellow-500 text-black text-xs font-semibold px-2 py-1 rounded-full">
@@ -102,18 +108,18 @@ function Originals() {
                 <img
                   src={`https://image.tmdb.org/t/p/w500/${movie.poster_path}`}
                   alt={movie.title || movie.name}
-                  className="w-full h-64 object-cover rounded-t-lg opacity-95 hover:opacity-100 transition-opacity"
+                  className="w-full h-65 object-cover rounded-lg opacity-95 hover:opacity-100 transition-opacity"
                 />
-                <div className="p-4">
-                  <p className="text-base font-semibold text-gray-200 truncate mb-3">
+                <div className="flex py-2">
+                  <p className="text-base font-semibold text-gray-200 p-2 truncate mb-3">
                     {movie.title || movie.name}
                   </p>
-                  <div className="flex justify-between text-sm text-gray-400 mt-1">
+                  {/* <div className="flex justify-between text-sm text-gray-400 mt-1">
                     <span>Year: {releaseYear}</span>
                     <span className="text-yellow-400">
                       Rating: {movie.vote_average || "N/A"}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
                 <button
                   onClick={(e) => {

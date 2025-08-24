@@ -3,6 +3,8 @@ import { useToast } from "@/hooks/use-toast";
 import { CiHeart } from "react-icons/ci";
 import { FaHeart } from "react-icons/fa";
 import { useAuth } from "../Context/AuthContext";
+import { LazyLoadImage } from "react-lazy-load-image-component";
+import "react-lazy-load-image-component/src/effects/blur.css";
 
 const IMAGE_BASE_URL = "http://image.tmdb.org/t/p/original";
 
@@ -40,9 +42,10 @@ function MovieCard({ movie, onClick }) {
       className="hover:scale-110 transition-all duration-150 ease-in relative w-48 cursor-pointer bg-[#1a1a1a] z-0"
       onClick={() => onClick(movie)}
     >
-      <img
+      <LazyLoadImage
         src={`${IMAGE_BASE_URL}${movie.poster_path}`}
         alt={movie.title || movie.name}
+        effect="blur" // mờ mờ trước khi load xong
         className="w-48 rounded-lg border-2 border-transparent hover:border-gray-400 cursor-pointer"
       />
       <div className="mt-2 flex justify-between items-center bg-[#1a1a1a]">

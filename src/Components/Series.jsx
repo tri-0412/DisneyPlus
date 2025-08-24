@@ -6,6 +6,7 @@ import { CiHeart } from "react-icons/ci";
 import { FaHeart } from "react-icons/fa";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "../Context/AuthContext";
+import LoadingSkeleton from "./LoadingSkeleton";
 
 function Series() {
   const [series, setSeries] = useState([]);
@@ -80,13 +81,18 @@ function Series() {
     }
   };
 
-  if (loading)
-    return <div className="text-white text-center p-6">Đang tải...</div>;
+  if (loading) return <LoadingSkeleton count={12} />;
+
   if (error) return <div className="text-red-500 text-center p-6">{error}</div>;
 
   return (
-    <div className="bg-[#1a1a1a] min-h-screen text-white p-6 mt-24">
-      <h1 className="text-3xl font-bold mb-6 text-gray-100 border-b-2 border-gray-700 pb-2">
+    <div className=" bg-[#1a1a1a] w-[1200px] min-h-screen text-white p-6 mt-24 mx-auto">
+      <h1
+        className="text-3xl font-bold mt-6 mb-10 
+               text-[#3cb4ff] tracking-wide uppercase 
+               drop-shadow-[0_0_10px_#5baee5] 
+               text-center"
+      >
         Series
       </h1>
       {series.length === 0 && !loading && !error ? (
@@ -112,29 +118,31 @@ function Series() {
             return (
               <div
                 key={seriesItem.id}
-                className="relative bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer"
+                className=" relative rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer"
                 onClick={() => handleSeriesClick(seriesItem)}
               >
                 <img
                   src={`https://image.tmdb.org/t/p/w500/${seriesItem.poster_path}`}
                   alt={seriesItem.name}
-                  className="w-full h-64 object-cover rounded-t-lg"
+                  className="w-full h-65 object-cover rounded-lg opacity-95 hover:opacity-100 transition-opacity"
                 />
-                <div className="p-4">
-                  <p className="text-lg font-semibold text-gray-200 truncate">
+                <div className="flex justify-center bg-transparent py-2 ">
+                  <p className="text-md font-semibold text-gray-200 truncate">
                     {seriesItem.name}
                   </p>
-                  <div className="flex justify-between text-sm text-gray-400 mt-1">
+                  {/* <div className="flex justify-between text-sm text-gray-400 mt-1">
                     <span>Year: {releaseYear}</span>
-                    <span>Rating: {seriesItem.vote_average || "N/A"}</span>
-                  </div>
+                    <span className="text-yellow-400">
+                      Rating: {seriesItem.vote_average || "N/A"}
+                    </span>
+                  </div> */}
                 </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleAddToWatchList(seriesItem.id);
                   }}
-                  className={`absolute top-2 right-2 h-8 w-8 p-1 bg-transparent focus:outline-none transition-all duration-300 ${
+                  className={`absolute top-0 right-2 h-8 w-8 p-1 bg-transparent focus:outline-none transition-all duration-300 ${
                     isInWatchList
                       ? "text-red-600 hover:scale-110 border-none"
                       : "text-white hover:scale-110 border-none"

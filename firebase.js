@@ -1,4 +1,3 @@
-// firebase.js
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
@@ -6,7 +5,16 @@ import {
   createUserWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { getFirestore, setDoc, doc, getDoc } from "firebase/firestore";
+import {
+  getFirestore,
+  setDoc,
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 import { toast } from "react-toastify";
 
 // Your web app's Firebase configuration
@@ -29,6 +37,12 @@ const signup = async (name, email, password) => {
   try {
     const res = await createUserWithEmailAndPassword(auth, email, password);
     const user = res.user;
+    console.log(
+      "Signup: Saving user to Firestore with uid:",
+      user.uid,
+      "email:",
+      email
+    );
     await setDoc(
       doc(db, "users", user.uid),
       {
@@ -39,6 +53,7 @@ const signup = async (name, email, password) => {
       },
       { merge: true }
     );
+    console.log("Signup: User data saved to Firestore successfully");
     // Khởi tạo watchlist
     await setDoc(doc(db, "watchlists", user.uid), { ids: [] }, { merge: true });
     return user;
@@ -63,6 +78,7 @@ const login = async (email, password) => {
       password
     );
     const user = userCredential.user;
+    console.log("Login: User authenticated with uid:", user.uid);
     // Kiểm tra và khởi tạo watchlist nếu chưa có
     const watchlistRef = doc(db, "watchlists", user.uid);
     const docSnap = await getDoc(watchlistRef);
@@ -71,9 +87,24 @@ const login = async (email, password) => {
     }
     return user;
   } catch (error) {
-    console.log(error);
+    console.log("Login error:", error);
     toast.error(error.code.split("/")[1].split("-").join(" "));
     throw error;
+  }
+};
+
+export const checkUserExists = async (email) => {
+  try {
+    console.log("checkUserExists: Querying for email:", email);
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    const exists = !querySnapshot.empty;
+    console.log("checkUserExists: Result for email", email, "is:", exists);
+    return exists;
+  } catch (error) {
+    console.error("Error checking user existence:", error);
+    return false;
   }
 };
 

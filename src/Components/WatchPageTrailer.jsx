@@ -80,11 +80,11 @@ function WatchPageTrailer() {
         onClick={() => navigate(-1)}
         className="absolute top-20 left-6 flex items-center text-white text-xl hover:text-gray-300 transition-colors duration-300 bg-transparent z-10"
       >
-        <FaArrowLeft className="mr-2 w-7 h-7" />
+        <FaArrowLeft className="mr-2 w-6 h-6" />
       </button>
       {mediaDetails && trailer && trailer.embedUrl && (
-        <div className="relative z-10 max-w-6xl mx-auto mt-10  rounded-xl p-6 shadow-2xl ">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center text-gray-100">
+        <div className="relative z-10 max-w-6xl mx-auto mt-2 rounded-xl pt-2 p-6 shadow-2xl ">
+          <h1 className="text-3xl md:text-4xl font-bold mb-10 text-center text-gray-100">
             {mediaDetails.title || mediaDetails.name} - Trailer
           </h1>
           <iframe

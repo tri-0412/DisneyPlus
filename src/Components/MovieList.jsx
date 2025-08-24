@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable no-unused-vars */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import GlobalApi from "../Services/GlobalApi";
 import MovieCard from "./MovieCard";
@@ -18,28 +18,62 @@ function MovieList({
   onMovieCount,
 }) {
   const [movieList, setMovieList] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
   const elementRef = useRef(null);
+  const loaderRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    getMovieByGenreId();
+    getMovieByGenreId(1); // load page đầu tiên
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getMovieByGenreId = () => {
-    GlobalApi.getMovieByGenreId(genreId)
+  const getMovieByGenreId = (pageNum) => {
+    GlobalApi.getMovieByGenreId(genreId, pageNum)
       .then((resp) => {
-        const results = resp.data.results || []; // Xử lý trường hợp resp.data.results undefined
-        setMovieList(results);
-        if (typeof onMovieCount === "function") {
-          console.log("Movie list length:", results.length); // Debug: Kiểm tra số lượng movie
-          onMovieCount(results.length); // Truyền số lượng movie lên cha
+        const results = resp.data.results || [];
+        if (results.length === 0) {
+          setHasMore(false);
+          return;
+        }
+        setMovieList((prev) => [...prev, ...results]);
+
+        if (typeof onMovieCount === "function" && pageNum === 1) {
+          onMovieCount(results.length);
         }
       })
       .catch((error) => {
-        console.error("Error fetching movies:", error); // Debug: Kiểm tra lỗi API
+        console.error("Error fetching movies:", error);
       });
   };
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          getMovieByGenreId(nextPage);
+        }
+      },
+      { threshold: 1 }
+    );
+
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
+    }
+
+    return () => {
+      if (currentLoader) observer.unobserve(currentLoader);
+    };
+  }, [page, hasMore]);
 
   const sliderRight = (element) => {
     element.scrollLeft += 500;
@@ -61,19 +95,21 @@ function MovieList({
         ref={elementRef}
         className="flex gap-7 overflow-x-auto scrollbar-hide scroll-smooth pt-4 pb-4 px-3"
       >
-        {movieList.slice(0, 10).map((item, index) => (
+        {movieList.map((item, index) => (
           <div key={item.id} className="relative flex-shrink-0">
             {index_ % 3 === 0 ? (
               <HrMovieCard
                 movie={item}
                 onClick={onMovieClick}
                 onAddToWatchList={onAddToWatchList}
+                lazy
               />
             ) : (
               <MovieCard
                 movie={item}
                 onClick={onMovieClick}
                 onAddToWatchList={onAddToWatchList}
+                lazy
               />
             )}
           </div>
