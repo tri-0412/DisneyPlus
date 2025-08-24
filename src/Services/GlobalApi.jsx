@@ -96,7 +96,7 @@ const getFullMovieVideo = async (movieId, options = {}) => {
     const tmdbId = movieId;
 
     // Ưu tiên 1: 2embed với IMDB ID
-    let embedUrl2embed = `/2embed/embed/${imdbId}`;
+    let embedUrl2embed = `https://www.2embed.cc/embed/${imdbId}`;
     console.log("Generated 2embed (IMDB) URL:", embedUrl2embed);
     const response2embedImdb = await axios.get(embedUrl2embed, {
       timeout: 7000,
@@ -113,7 +113,7 @@ const getFullMovieVideo = async (movieId, options = {}) => {
     }
 
     // Ưu tiên 2: vidsrc với TMDB ID
-    let embedUrl = `/vidsrc/embed/movie?tmdb=${tmdbId}`;
+    let embedUrl = `https://vidsrc.xyz/embed/movie?tmdb=${tmdbId}`;
     console.log("Generated vidsrc URL:", embedUrl);
     const vidsrcResponse = await axios.get(embedUrl, { timeout: 7000 });
     if (
@@ -128,7 +128,7 @@ const getFullMovieVideo = async (movieId, options = {}) => {
     }
 
     // Ưu tiên 3: 2embed với TMDB ID
-    embedUrl2embed = `/2embed/embed/${tmdbId}`;
+    embedUrl2embed = `https://www.2embed.cc/embed/${tmdbId}`;
     console.log("Fallback to 2embed (TMDB) URL:", embedUrl2embed);
     const response2embedTmdb = await axios.get(embedUrl2embed, {
       timeout: 7000,
@@ -146,7 +146,9 @@ const getFullMovieVideo = async (movieId, options = {}) => {
 
     // Fallback cuối cùng: player4u
     const shortTitle = title.split(" ").slice(0, 2).join(" ");
-    embedUrl = `/player4u/embed?key=${encodeURIComponent(shortTitle)}`;
+    embedUrl = `https://player4u.xyz/embed?key=${encodeURIComponent(
+      shortTitle
+    )}`;
     const params = [];
     if (options.autoplay) params.push(`autoplay=1`);
     if (params.length > 0) embedUrl += `&${params.join("&")}`;
@@ -235,7 +237,7 @@ const getSeriesEpisodeVideo = async (seriesId, season, episode) => {
       },
       {
         name: "player4u",
-        url: `/player4u/embed?key=${encodeURIComponent(
+        url: `https://player4u.xyz/embed?key=${encodeURIComponent(
           `${title} s${formattedSeason}e${formattedEpisode}`
         )}`,
         check: (data) =>
