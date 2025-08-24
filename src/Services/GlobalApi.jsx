@@ -86,88 +86,92 @@ const getFullMovieVideo = async (movieId, options = {}) => {
     const imdbId = tmdbResponse.data.imdb_id || `tt${movieId}`;
     const tmdbId = movieId;
 
-    // Ưu tiên 1: 2embed IMDB
+    // ✅ Ưu tiên 1: 2embed
     let embedUrl2embed = `https://www.2embed.cc/embed/${imdbId}`;
-    console.log("Generated 2embed (IMDB) URL:", embedUrl2embed);
-    const response2embedImdb = await axios.get(
+    const response2embed = await axios.get(
       PROXY + encodeURIComponent(embedUrl2embed),
       { timeout: 7000 }
     );
     if (
-      response2embedImdb.data.includes("<video") ||
-      response2embedImdb.data.includes("<iframe") ||
-      response2embedImdb.data.includes("jwplayer") ||
-      response2embedImdb.data.includes("source")
+      response2embed.data.includes("<video") ||
+      response2embed.data.includes("<iframe")
     ) {
-      const result = { embedUrl: embedUrl2embed, source: "2embed-imdb" };
+      const result = {
+        embedUrl: `/api/proxy?url=${encodeURIComponent(embedUrl2embed)}`,
+        source: "2embed",
+      };
       cacheData(cacheKey, result);
       return { data: result };
     }
 
-    // Ưu tiên 2: vidsrc TMDB
-    let embedUrl = `https://vidsrc.xyz/embed/movie?tmdb=${tmdbId}`;
-    console.log("Generated vidsrc URL:", embedUrl);
-    const vidsrcResponse = await axios.get(
-      PROXY + encodeURIComponent(embedUrl),
+    // ✅ Ưu tiên 2: vidsrc
+    let embedUrlVidsrc = `https://vidsrc.xyz/embed/movie/${imdbId}`;
+    const responseVidsrc = await axios.get(
+      PROXY + encodeURIComponent(embedUrlVidsrc),
       { timeout: 7000 }
     );
     if (
-      vidsrcResponse.data.includes("<video") ||
-      vidsrcResponse.data.includes("<iframe") ||
-      vidsrcResponse.data.includes("jwplayer") ||
-      vidsrcResponse.data.includes("source")
+      responseVidsrc.data.includes("<video") ||
+      responseVidsrc.data.includes("<iframe")
     ) {
-      const result = { embedUrl, source: "vidsrc" };
+      const result = {
+        embedUrl: `/api/proxy?url=${encodeURIComponent(embedUrlVidsrc)}`,
+        source: "vidsrc",
+      };
       cacheData(cacheKey, result);
       return { data: result };
     }
 
-    // Ưu tiên 3: 2embed TMDB
-    embedUrl2embed = `https://www.2embed.cc/embed/${tmdbId}`;
-    console.log("Fallback to 2embed (TMDB) URL:", embedUrl2embed);
-    const response2embedTmdb = await axios.get(
-      PROXY + encodeURIComponent(embedUrl2embed),
+    // ✅ Ưu tiên 3: player4u
+    let embedUrlPlayer4u = `https://player4u.net/embed/${imdbId}`;
+    const responsePlayer4u = await axios.get(
+      PROXY + encodeURIComponent(embedUrlPlayer4u),
       { timeout: 7000 }
     );
     if (
-      response2embedTmdb.data.includes("<video") ||
-      response2embedTmdb.data.includes("<iframe") ||
-      response2embedTmdb.data.includes("jwplayer") ||
-      response2embedTmdb.data.includes("source")
+      responsePlayer4u.data.includes("<video") ||
+      responsePlayer4u.data.includes("<iframe")
     ) {
-      const result = { embedUrl: embedUrl2embed, source: "2embed-tmdb" };
+      const result = {
+        embedUrl: `/api/proxy?url=${encodeURIComponent(embedUrlPlayer4u)}`,
+        source: "player4u",
+      };
       cacheData(cacheKey, result);
       return { data: result };
     }
-
     // Fallback cuối: player4u
     const shortTitle = title.split(" ").slice(0, 2).join(" ");
-    embedUrl = `https://player4u.xyz/embed?key=${encodeURIComponent(
+    let embedUrl = `https://player4u.xyz/embed?key=${encodeURIComponent(
       shortTitle
     )}`;
     const params = [];
     if (options.autoplay) params.push(`autoplay=1`);
     if (params.length > 0) embedUrl += `&${params.join("&")}`;
     console.log("Fallback to player4u URL:", embedUrl);
+
     const player4uResponse = await axios.get(
       PROXY + encodeURIComponent(embedUrl),
       { timeout: 7000 }
     );
+
     if (
       player4uResponse.data.includes("<video") ||
       player4uResponse.data.includes("<iframe") ||
       player4uResponse.data.includes("jwplayer") ||
       player4uResponse.data.includes("source")
     ) {
-      const result = { embedUrl, source: "player4u" };
+      const result = {
+        embedUrl: `/api/proxy?url=${encodeURIComponent(embedUrl)}`,
+        source: "player4u",
+      };
       cacheData(cacheKey, result);
       return { data: result };
     }
 
     throw new Error("Không tìm thấy video từ các nguồn");
   } catch (error) {
-    console.error("Error fetching video:", error.message);
-    throw new Error(`Không thể lấy URL video: ${error.message}`);
+    console.error("Error fetching movie video:", error.message);
+    throw new Error(`Không thể lấy URL video phim: ${error.message}`);
   }
 };
 
