@@ -2,7 +2,8 @@
 import axios from "axios";
 
 const movieBaseUrl = "https://api.themoviedb.org/3";
-const api_key = "2ec0d66f5bdf1dd12eefa0723f1479cf";
+const api_key = import.meta.env.VITE_TMDB_API_KEY;
+
 const tvBaseURL = `${movieBaseUrl}/tv`;
 
 // Proxy endpoint trên Vercel (serverless function)
